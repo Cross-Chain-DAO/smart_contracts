@@ -126,7 +126,7 @@ contract Treasury is Ownable, IWormholeReceiver {
 
         // send the message to the voting chain
         bytes memory message = abi.encode(id, startTime, endTime);
-        broadcastMessageToVotingContracts(message);
+        broadcastMessageToVotingContracts(MessageType.ProposalCreated, message);
 
         emit ProposalCreated(
             id,
@@ -151,7 +151,7 @@ contract Treasury is Ownable, IWormholeReceiver {
 
         // send the message to the voting chain
         bytes memory message = abi.encode(id);
-        broadcastMessageToVotingContracts(message);
+        broadcastMessageToVotingContracts(MessageType.RequestVotes, message, 0);
 
         emit VotesRequested(id, msg.sender);
     }
@@ -191,6 +191,14 @@ contract Treasury is Ownable, IWormholeReceiver {
         MessageType messageType,
         bytes memory message
     ) internal {
+        broadcastMessageToVotingContracts(messageType, message, 0);
+    }
+
+    function broadcastMessageToVotingContracts(
+        MessageType messageType,
+        bytes memory message,
+        uint256 value
+    ) internal {
         // TODO: check if the voting period is over, and also if not broadcasted earlier
         if (quoteBroadcastingFees() != msg.value) revert InvalidFeesPaid();
         uint256 m_totalSupportedVotingChains = totalSupportedVotingChains;
@@ -202,7 +210,7 @@ contract Treasury is Ownable, IWormholeReceiver {
                 chainId,
                 votingContractAddress,
                 abi.encode(messageType, message), // payload
-                0, // no receiver value needed since we're just passing a message
+                value, // no receiver value needed since we're just passing a message
                 GAS_LIMIT
             );
         }
