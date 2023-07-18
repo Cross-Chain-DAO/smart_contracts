@@ -80,7 +80,8 @@ contract Treasury is Ownable, IWormholeReceiver {
     error VotingPeriodNotEnded();
     error VotesAlreadyRequested();
 
-    constructor(uint256 _duration) {
+    constructor(uint256 _duration, address _wormholeRelayer) {
+        wormholeRelayer = IWormholeRelayer(_wormholeRelayer);
         duration = _duration;
     }
 
