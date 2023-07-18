@@ -27,6 +27,10 @@ contract GovernanceToken is ERC20, ERC20Permit, ERC20Votes, Ownable {
         return SafeCast.toUint48(block.timestamp);
     }
 
+    function CLOCK_MODE() public pure virtual override returns (string memory) {
+        return "mode=timestamp";
+    }
+
     function _afterTokenTransfer(
         address from,
         address to,
