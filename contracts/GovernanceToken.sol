@@ -23,6 +23,10 @@ contract GovernanceToken is ERC20, ERC20Permit, ERC20Votes, Ownable {
 
     // The following functions are overrides required by Solidity.
 
+    function clock() public view virtual override returns (uint48) {
+        return SafeCast.toUint48(block.timestamp);
+    }
+
     function _afterTokenTransfer(
         address from,
         address to,
@@ -45,4 +49,6 @@ contract GovernanceToken is ERC20, ERC20Permit, ERC20Votes, Ownable {
     ) internal override(ERC20, ERC20Votes) {
         super._burn(account, amount);
     }
+
+    // TODO: add the code for bridging the token
 }
