@@ -1,5 +1,6 @@
 # Governor Smart Contract Documentation
 
+Watch the video by clicking on the image below.
 [![Watch the video](https://i.imgur.com/PpqxUVp.jpg)](https://www.youtube.com/watch?v=tcxoGLWKKk8)
 
 ## Introduction
