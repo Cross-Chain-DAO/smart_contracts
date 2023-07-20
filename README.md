@@ -1,5 +1,7 @@
 # Governor Smart Contract Documentation
 
+[![Watch the video](https://imgur.com/PpqxUVp)](https://www.youtube.com/watch?v=tcxoGLWKKk8)
+
 ## Introduction
 
 Governor is a decentralized governance smart contract that enables voting and execution of proposals on multiple blockchains using the Wormhole protocol. It allows users to participate in decision-making processes and shape the direction of the associated decentralized application (dApp). The contract supports both base proposals and cross-chain proposals, enabling communication and collaboration across different chains.
