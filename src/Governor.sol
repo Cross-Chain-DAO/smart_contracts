@@ -11,6 +11,11 @@ import "openzeppelin-contracts/access/Ownable.sol";
 import "openzeppelin-contracts/utils/Address.sol";
 import "./IGovernor.sol";
 
+/**
+ * @title Governor
+ * @dev A decentralized governance contract that allows cross-chain proposals, voting, and execution.
+ * It integrates with the Wormhole protocol to enable cross-chain communication and coordination.
+ */
 contract Governor is IWormholeReceiver, Ownable, IGovernor {
     mapping(uint256 => mapping(address => VoteInfo))
         public hasVotedOnBaseProposal;
@@ -43,6 +48,10 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
     uint256 public totalEstimatedActiveBaseChainProposal;
     mapping(uint16 => uint256) public totalEstimatedActiveCrossChainProposal;
 
+    /**
+     * @dev Modifier to check if a base proposal is active (voting period has not ended).
+     * @param id The ID of the base proposal to check.
+     */
     modifier onlyActiveBaseProposal(uint256 id) {
         BaseProposal memory proposal = baseProposals[id];
         if (proposal.startTime == 0) revert InvalidProposalId();
@@ -50,6 +59,11 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         _;
     }
 
+    /**
+     * @dev Modifier to check if a cross-chain proposal is active (voting period has not ended).
+     * @param chainId The ID of the target chain.
+     * @param proposalId The ID of the cross-chain proposal to check.
+     */
     modifier onlyActiveCrossChainProposal(uint16 chainId, uint256 proposalId) {
         CrossChainProposal memory proposal = crossChainProposals[chainId][
             proposalId
@@ -59,13 +73,27 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         _;
     }
 
+    /**
+     * @dev Constructor function to initialize the Governor contract.
+     * @param _governanceToken The address of the governance token used for voting.
+     * @param wormholeRelayer_ The address of the Wormhole Relayer contract on the base chain.
+     */
     constructor(address _governanceToken, address wormholeRelayer_) {
         governanceToken = IERC20(_governanceToken);
         wormholeRelayer = IWormholeRelayer(wormholeRelayer_);
     }
 
+    /**
+     * @dev Fallback function to receive Ether when sent to the contract.
+     */
     receive() external payable {}
 
+    /**
+     * @dev Adds a supported contract address on a target chain to enable cross-chain governance.
+     * @param chainId The ID of the target chain.
+     * @param contractAddress The address of the contract on the target chain.
+     * @notice Only the contract owner can call this function.
+     */
     function addSupportedContract(
         uint16 chainId,
         address contractAddress
@@ -78,6 +106,11 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         emit SupportChainAdded(chainId, contractAddress);
     }
 
+    /**
+     * @dev Removes a supported contract address from the list of supported chains.
+     * @param chainId The ID of the target chain to remove support from.
+     * @notice Only the contract owner can call this function.
+     */
     function removeSupportedContract(uint16 chainId) public onlyOwner {
         if (supportedContracts[chainId] == address(0))
             revert ChainNotSupported();
@@ -91,17 +124,34 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         emit SupportChainRemoved(chainId);
     }
 
+    /**
+     * @dev Sets the duration (in seconds) for each voting period of a base proposal.
+     * @param _duration The duration of the voting period.
+     * @notice Only the contract owner can call this function.
+     */
     function setDuration(uint256 _duration) public onlyOwner {
         duration = _duration;
         emit DurationUpdated(_duration);
     }
 
+    /**
+     * @dev Stakes the governance token to participate in voting.
+     * @param amount The amount of tokens to stake.
+     */
     function stake(uint256 amount) public {
         governanceToken.transferFrom(msg.sender, address(this), amount);
         stakedBalance[msg.sender] += amount;
         emit TokenStaked(msg.sender, amount, stakedBalance[msg.sender]);
     }
 
+    /**
+     * @dev Creates a new base proposal.
+     * @param targets The list of target contract addresses to call during execution.
+     * @param values The list of ETH values (in wei) to send when calling the target contracts.
+     * @param calldatas The list of encoded function data to call the target contracts with.
+     * @param description The description of the proposal.
+     * @notice The proposal creator must pay broadcasting fees to execute this function.
+     */
     function createProposal(
         address[] memory targets,
         uint256[] memory values,
@@ -162,6 +212,12 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         );
     }
 
+    /**
+     * @dev Votes on a base proposal.
+     * @param id The ID of the base proposal to vote on.
+     * @param voteType The type of vote (ForVotes, AgainstVotes, or AbstrainVotes).
+     * @notice Voters can change their votes, and the latest vote will be counted.
+     */
     function voteOnBaseProposal(
         uint256 id,
         VoteTypes voteType
@@ -205,6 +261,13 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         );
     }
 
+    /**
+     * @dev Votes on a cross-chain proposal.
+     * @param chainId The ID of the target chain.
+     * @param proposalId The ID of the cross-chain proposal to vote on.
+     * @param voteType The type of vote (ForVotes, AgainstVotes, or AbstrainVotes).
+     * @notice Voters can change their votes, and the latest vote will be counted.
+     */
     function voteOnCrossChainProposal(
         uint16 chainId,
         uint256 proposalId,
@@ -243,6 +306,11 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         }
     }
 
+    /**
+     * @dev Counts the votes for a base proposal and requests votes from other chains.
+     * @param id The ID of the base proposal to count votes for.
+     * @notice The sender must pay broadcasting fees to execute this function.
+     */
     function countVotes(uint256 id) public payable {
         if (quoteBroadcastingFees() != msg.value) revert InvalidFeesPaid();
         if (id >= totalProposals) revert InvalidProposalId();
@@ -299,7 +367,11 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         (cost, ) = wormholeRelayer.quoteEVMDeliveryPrice(chainId, 0, GAS_LIMIT);
     }
 
-    // create a execute function
+    /**
+     * @dev Executes a base proposal if it has enough support.
+     * @param id The ID of the base proposal to execute.
+     * @notice The proposal creator must pay broadcasting fees to execute this function.
+     */
     function executeProposal(uint256 id) external {
         BaseProposal memory proposal = baseProposals[id];
         if (proposal.executed) revert ProposalAlreadyExecuted();
@@ -481,7 +553,10 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         );
     }
 
-    // TODO: remove the votes on unstake
+    /**
+     * @dev Unstakes the staked governance token and removes the associated votes from active proposals.
+     * @param amount The amount of tokens to unstake.
+     */
     function unstake(uint256 amount) external {
         if (stakedBalance[msg.sender] < amount)
             revert InsufficiantStakedBalance();
@@ -619,6 +694,12 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         emit TokenUnstaked(msg.sender, amount, newVotingPower);
     }
 
+    /**
+     * @dev Internal function to get the minimum value between two integers.
+     * @param a The first integer.
+     * @param b The second integer.
+     * @return The minimum value between a and b.
+     */
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a > b) return b;
         return a;
