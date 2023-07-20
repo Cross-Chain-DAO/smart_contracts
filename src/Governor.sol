@@ -623,10 +623,4 @@ contract Governor is IWormholeReceiver, Ownable, IGovernor {
         if (a > b) return b;
         return a;
     }
-
-    function getVotes(uint256 id) public view returns (uint256) {
-        return baseProposals[id].baseChainVoteInfo.forVotes;
-    }
-
-    function getTotalVotes(uint256 id) public view returns (uint256) {}
 }
